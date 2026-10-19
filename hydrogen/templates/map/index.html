@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+{% block title %}Live Facility Map{% endblock %}
+{% block page_title %}Live Facility Map{% endblock %}
+
+{% block content %}
+<div class="grid-3" style="grid-template-columns: 2fr 1fr;">
+    <div class="card map-container" style="padding: 0; min-height: 620px;">
+        <svg viewBox="0 0 1000 620" id="facility-map" style="width: 100%; height: 100%;">
+            <!-- Corridors -->
+            <rect x="250" y="200" width="500" height="220" fill="rgba(255,255,255,0.05)" />
+            
+            <!-- Patient Room -->
+            <rect x="50" y="50" width="300" height="250" class="zone" rx="10" />
+            <text x="60" y="80" class="zone-label">Patient Room (General Ward)</text>
+            <g id="zone-Patient-Room" transform="translate(60, 100)"></g>
+
+            <!-- Therapy Room -->
+            <rect x="50" y="320" width="300" height="250" class="zone" rx="10" />
+            <text x="60" y="350" class="zone-label">Therapy Room</text>
+            <g id="zone-Therapy-Room" transform="translate(60, 370)"></g>
+
+            <!-- Dining Hall -->
+            <rect x="650" y="50" width="300" height="250" class="zone" rx="10" />
+            <text x="660" y="80" class="zone-label">Dining Hall</text>
+            <g id="zone-Dining-Hall" transform="translate(660, 100)"></g>
+
+            <!-- Medical Room (Restricted) -->
+            <rect x="650" y="320" width="300" height="150" class="zone restricted" rx="10" />
+            <text x="660" y="350" class="zone-label" fill="var(--status-red)">Medical Room (Restricted)</text>
+            <g id="zone-Medical-Room" transform="translate(660, 370)"></g>
+
+            <!-- Main Entrance (Restricted) -->
+            <rect x="400" y="500" width="200" height="100" class="zone restricted" rx="10" />
+            <text x="410" y="530" class="zone-label" fill="var(--status-red)">Main Entrance (Perimeter)</text>
+            <g id="zone-Main-Entrance" transform="translate(410, 550)"></g>
+        </svg>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="card" id="patient-panel" style="display: none;">
+            <h3 id="panel-name" style="color: var(--accent-cyan); margin-bottom: 5px;"></h3>
+            <p style="color: var(--text-secondary); margin-bottom: 15px;"><span id="panel-code"></span></p>
+            
+            <div style="margin-bottom: 10px;">
+                <span style="color: var(--text-secondary);">Status:</span>
+                <span id="panel-status"></span>
+            </div>
+            <div style="margin-bottom: 10px;">
+                <span style="color: var(--text-secondary);">Location:</span>
+                <span id="panel-location" style="color: var(--text-primary);"></span>
+            </div>
+            <div style="margin-bottom: 10px;">
+                <span style="color: var(--text-secondary);">Condition:</span>
+                <span id="panel-condition" style="color: var(--text-primary);"></span>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <span style="color: var(--text-secondary);">Last Seen:</span>
+                <span id="panel-lastseen" style="color: var(--text-primary);"></span>
+            </div>
+            <a id="panel-link" href="#" class="btn btn-primary" style="display: block; text-align: center;">View Full Profile</a>
+        </div>
+        
+        <div class="card" id="legend-panel">
+            <h3 style="margin-bottom: 15px; font-size: 1.1rem;">Legend</h3>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <circle cx="10" cy="10" r="10" fill="var(--status-green)" style="width:20px; height:20px; border-radius:50%; background:var(--status-green);"></circle>
+                <span>Normal</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <circle cx="10" cy="10" r="10" fill="var(--status-amber)" style="width:20px; height:20px; border-radius:50%; background:var(--status-amber);"></circle>
+                <span>Attention Required</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <circle cx="10" cy="10" r="10" fill="var(--status-red)" style="width:20px; height:20px; border-radius:50%; background:var(--status-red);"></circle>
+                <span class="dot-red">Active Alert</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px; margin-top: 20px;">
+                <div style="width:30px; height:20px; border: 2px dashed var(--status-red); background: rgba(16,26,43,0.5);"></div>
+                <span>Restricted Zone</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 style="margin-bottom: 15px; font-size: 1.1rem;">Live Feed</h3>
+            <div id="mini-feed" style="max-height: 200px; overflow-y: auto; font-size: 0.9rem;">
+                <!-- Feed injected here -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let lastDataHash = "";
+    
+    function getInitials(name) {
+        return name.split(' ').map(n => n[0]).join('').substring(0, 2);
+    }
+    
+    function showPatientPanel(patient) {
+        document.getElementById('patient-panel').style.display = 'block';
+        document.getElementById('panel-name').textContent = patient.name;
+        document.getElementById('panel-code').textContent = patient.patient_code;
+        
+        let badgeClass = 'green';
+        if (patient.status === 'Attention Required') badgeClass = 'amber';
+        if (patient.status === 'Alert') badgeClass = 'red';
+        
+        document.getElementById('panel-status').innerHTML = `<span class="badge ${badgeClass}">${patient.status}</span>`;
+        document.getElementById('panel-location').textContent = patient.current_location || 'Unknown';
+        document.getElementById('panel-condition').textContent = patient.medical_condition || 'N/A';
+        document.getElementById('panel-lastseen').textContent = patient.last_seen || 'N/A';
+        document.getElementById('panel-link').href = `/patients/${patient.id}`;
+    }
+
+    async function updateMap() {
+        const data = await fetchLiveFeed();
+        if (!data) return;
+        
+        // Simple hashing to avoid DOM thrashing if no data changed
+        const newHash = JSON.stringify(data.patients.map(p => p.current_location + p.status));
+        if (newHash === lastDataHash) return; // No change
+        lastDataHash = newHash;
+
+        // Group patients by zone
+        const zones = {
+            'Patient Room': [],
+            'Therapy Room': [],
+            'Dining Hall': [],
+            'Medical Room': [],
+            'Main Entrance': []
+        };
+        
+        data.patients.forEach(p => {
+            if (p.current_location && zones[p.current_location]) {
+                zones[p.current_location].push(p);
+            }
+        });
+
+        // Render dots
+        for (const [zoneName, patientsInZone] of Object.entries(zones)) {
+            const safeZoneId = 'zone-' + zoneName.replace(' ', '-');
+            const g = document.getElementById(safeZoneId);
+            if (!g) continue;
+            
+            g.innerHTML = ''; // Clear existing
+            
+            patientsInZone.forEach((p, idx) => {
+                const col = idx % 5;
+                const row = Math.floor(idx / 5);
+                const x = col * 45 + 20;
+                const y = row * 45 + 20;
+                
+                let fillColor = 'var(--status-green)';
+                let pulseClass = '';
+                if (p.status === 'Attention Required') fillColor = 'var(--status-amber)';
+                if (p.status === 'Alert') {
+                    fillColor = 'var(--status-red)';
+                    pulseClass = 'dot-red';
+                }
+
+                // Create group for dot and text
+                const dotG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                dotG.setAttribute("class", "patient-dot " + pulseClass);
+                dotG.onclick = () => showPatientPanel(p);
+                
+                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                circle.setAttribute("cx", x);
+                circle.setAttribute("cy", y);
+                circle.setAttribute("r", 15);
+                circle.setAttribute("fill", fillColor);
+                
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", x);
+                text.setAttribute("y", y + 4); // center text
+                text.setAttribute("text-anchor", "middle");
+                text.setAttribute("fill", "white");
+                text.setAttribute("font-size", "10px");
+                text.setAttribute("font-weight", "bold");
+                text.textContent = getInitials(p.name);
+                
+                dotG.appendChild(circle);
+                dotG.appendChild(text);
+                g.appendChild(dotG);
+            });
+        }
+        
+        // Update mini feed
+        let feedHtml = '';
+        data.recent_scans.slice(0, 5).forEach(scan => {
+            feedHtml += `<div style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <div style="color: var(--accent-cyan); font-weight: bold;">${scan.patient_name}</div>
+                <div style="color: var(--text-secondary);">${scan.location}</div>
+                <div style="font-size: 0.8rem; color: #666;">${new Date(scan.timestamp).toLocaleTimeString()}</div>
+            </div>`;
+        });
+        document.getElementById('mini-feed').innerHTML = feedHtml;
+    }
+
+    updateMap();
+    setInterval(updateMap, 3000);
+</script>
+{% endblock %}

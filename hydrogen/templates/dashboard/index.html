@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Live Dashboard{% endblock %}
+
+{% block content %}
+<div class="grid-3">
+    <div class="card stat-card">
+        <h3>Total Patients</h3>
+        <div class="value" id="stat-patients">--</div>
+    </div>
+    <div class="card stat-card">
+        <h3>Active Alerts</h3>
+        <div class="value" id="stat-alerts" style="background: -webkit-linear-gradient(var(--status-red), #b91c1c); -webkit-background-clip: text;">--</div>
+    </div>
+    <div class="card stat-card">
+        <h3>Zone Occupancy</h3>
+        <div style="text-align: left; margin-top: 10px; font-size: 0.9rem; color: var(--text-secondary);" id="stat-zones">
+            <!-- Zones injected via JS -->
+        </div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <h3 style="margin-bottom: 15px; color: var(--accent-cyan);">Active Alerts</h3>
+        <div style="max-height: 300px; overflow-y: auto;">
+            <table id="table-alerts">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Patient</th>
+                        <th>Location</th>
+                        <th>Severity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Injected via JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card">
+        <h3 style="margin-bottom: 15px; color: var(--accent-blue);">Recent Scans</h3>
+        <div style="max-height: 300px; overflow-y: auto;">
+            <table id="table-scans">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Patient</th>
+                        <th>Location</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Injected via JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card" style="margin-top: 20px;">
+    <h3 style="margin-bottom: 15px; color: var(--accent-green);">Patient Records</h3>
+    <div style="max-height: 350px; overflow-y: auto;">
+        <table id="table-records">
+            <thead>
+                <tr>
+                    <th>Patient</th>
+                    <th>Code</th>
+                    <th>Condition</th>
+                    <th>Location</th>
+                    <th>Room</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Injected via JS -->
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function updateDashboard() {
+        const data = await fetchLiveFeed();
+        if (!data) return;
+
+        // Update stats
+        document.getElementById('stat-patients').textContent = data.stats.total_patients;
+        document.getElementById('stat-alerts').textContent = data.stats.active_alerts_count;
+        
+        // Update zones
+        let zoneHtml = '';
+        for (const [zone, count] of Object.entries(data.stats.zone_occupancy)) {
+            zoneHtml += `<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>${zone}</span><span>${count}</span></div>`;
+        }
+        document.getElementById('stat-zones').innerHTML = zoneHtml;
+
+        // Update Alerts table
+        let alertsHtml = '';
+        data.active_alerts.forEach(alert => {
+            alertsHtml += `
+                <tr>
+                    <td>${new Date(alert.timestamp).toLocaleTimeString()}</td>
+                    <td>${alert.patient_name}</td>
+                    <td>${alert.location}</td>
+                    <td><span class="badge red">${alert.severity}</span></td>
+                </tr>
+            `;
+        });
+        if(data.active_alerts.length === 0) alertsHtml = '<tr><td colspan="4">No active alerts</td></tr>';
+        document.getElementById('table-alerts').querySelector('tbody').innerHTML = alertsHtml;
+
+        // Update Scans table
+        let scansHtml = '';
+        data.recent_scans.forEach(scan => {
+            scansHtml += `
+                <tr>
+                    <td>${new Date(scan.timestamp).toLocaleTimeString()}</td>
+                    <td>${scan.patient_name}</td>
+                    <td>${scan.location}</td>
+                </tr>
+            `;
+        });
+        document.getElementById('table-scans').querySelector('tbody').innerHTML = scansHtml;
+
+        // Update patient records table
+        const records = data.records || data.patients || [];
+        let recordsHtml = '';
+        records.forEach(patient => {
+            recordsHtml += `
+                <tr>
+                    <td>${patient.name}</td>
+                    <td>${patient.patient_code}</td>
+                    <td>${patient.medical_condition || 'N/A'}</td>
+                    <td>${patient.current_location || 'Unknown'}</td>
+                    <td>${patient.room_number || 'N/A'}</td>
+                    <td><span class="badge ${patient.status === 'Critical' ? 'red' : patient.status === 'Normal' ? 'green' : 'yellow'}">${patient.status || 'Unknown'}</span></td>
+                </tr>
+            `;
+        });
+        if (records.length === 0) recordsHtml = '<tr><td colspan="6">No patient records</td></tr>';
+        document.getElementById('table-records').querySelector('tbody').innerHTML = recordsHtml;
+    }
+
+    // Initial load and polling
+    updateDashboard();
+    setInterval(updateDashboard, 3000);
+</script>
+{% endblock %}

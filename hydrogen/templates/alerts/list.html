@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %}Alerts{% endblock %}
+{% block page_title %}Alert Management{% endblock %}
+
+{% block content %}
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Patient</th>
+                <th>Alert Type</th>
+                <th>Severity</th>
+                <th>Location</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for a in alerts %}
+            <tr>
+                <td>{{ a.timestamp }}</td>
+                <td>{{ a.patient_name }}</td>
+                <td>{{ a.alert_type }}</td>
+                <td>
+                    <span class="badge {% if a.severity == 'Critical' %}red{% elif a.severity == 'High' %}amber{% else %}green{% endif %}">
+                        {{ a.severity }}
+                    </span>
+                </td>
+                <td>{{ a.location }}</td>
+                <td>
+                    {% if a.status == 'Active' %}
+                        <span class="badge red">Active</span>
+                    {% else %}
+                        <span class="badge green">Resolved by {{ a.resolved_by_name }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if a.status == 'Active' %}
+                    <form action="{{ url_for('alert.resolve', alert_id=a.id) }}" method="POST" style="display:inline;">
+                        <input type="text" name="resolution_notes" placeholder="Notes..." required style="padding: 2px; width: 100px;">
+                        <button type="submit" class="btn btn-primary" style="padding: 3px 8px; font-size: 0.8rem;">Resolve</button>
+                    </form>
+                    {% else %}
+                    <span style="font-size: 0.8rem; color: var(--text-secondary);">{{ a.resolution_notes }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            {% if not alerts %}
+            <tr><td colspan="7">No alerts found.</td></tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

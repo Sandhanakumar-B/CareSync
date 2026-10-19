@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}RFID Tags{% endblock %}
+{% block page_title %}RFID Tags{% endblock %}
+
+{% block content %}
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Tag ID</th>
+                <th>Label</th>
+                <th>Status</th>
+                <th>Assigned Patient</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in tags %}
+            <tr>
+                <td>{{ t.tag_id }}</td>
+                <td>{{ t.tag_label }}</td>
+                <td>
+                    {% if t.status == 'Assigned' %}
+                        <span class="badge amber">{{ t.status }}</span>
+                    {% else %}
+                        <span class="badge green">{{ t.status }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ t.patient_name or 'Unassigned' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

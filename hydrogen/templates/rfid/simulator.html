@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% block title %}RFID Simulator{% endblock %}
+{% block page_title %}RFID Simulator{% endblock %}
+
+{% block content %}
+<div class="grid-2">
+    <div class="card">
+        <h3 style="margin-bottom: 20px; color: var(--accent-cyan);">Manual Scan Simulator</h3>
+        
+        <div class="form-group">
+            <label>Select Patient</label>
+            <select id="sim-patient" class="form-control">
+                {% for p in patients %}
+                <option value="{{ p.rfid_tag_id }}" data-name="{{ p.name }}" data-condition="{{ p.medical_condition }}">{{ p.name }} (Tag: {{ p.rfid_tag_id }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label>Select Reader / Location</label>
+            <select id="sim-reader" class="form-control">
+                {% for r in readers %}
+                <option value="{{ r.reader_id }}">{{ r.location_name }} {% if r.is_restricted %}(Restricted){% endif %}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <button id="btn-scan" class="btn btn-primary" style="width: 100%;">Simulate RFID Scan</button>
+        
+        <div id="scan-result" style="margin-top: 20px; display: none; padding: 15px; border-radius: 8px;">
+            <!-- Result injected here -->
+        </div>
+    </div>
+    
+    <div class="card">
+        <h3 style="margin-bottom: 20px; color: var(--accent-blue);">Demo Scenarios</h3>
+        <p style="color: var(--text-secondary); margin-bottom: 20px;">Use these quick-actions to demonstrate system capabilities.</p>
+        
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <button class="btn btn-primary btn-demo" data-patient="RFID001" data-reader="READER-03" style="text-align: left;">
+                1. Normal Movement: Alice (Dementia) to Dining Hall
+            </button>
+            <button class="btn btn-danger btn-demo" data-patient="RFID001" data-reader="READER-05" style="text-align: left;">
+                2. Critical Alert: Alice (Wandering Risk) to Main Entrance (Restricted)
+            </button>
+            <button class="btn btn-primary btn-demo" data-patient="RFID003" data-reader="READER-02" style="text-align: left;">
+                3. Normal Movement: Eva (Post-Op) to Therapy Room
+            </button>
+            <button class="btn btn-danger btn-demo" data-patient="RFID002" data-reader="READER-04" style="text-align: left;">
+                4. Critical Alert: Robert (Wandering Risk) to Medical Room (Restricted)
+            </button>
+            <button class="btn btn-primary btn-demo" data-patient="RFID004" data-reader="READER-01" style="text-align: left;">
+                5. Normal Return: David (Cardiac) to Patient Room
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function performScan(tagId, readerId) {
+        const resultDiv = document.getElementById('scan-result');
+        resultDiv.style.display = 'none';
+        
+        try {
+            const response = await fetch('/api/rfid/scan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tag_id: tagId, reader_id: readerId, trigger_source: 'SIMULATION' })
+            });
+            
+            const data = await response.json();
+            resultDiv.style.display = 'block';
+            
+            if (data.success) {
+                if (data.alert_fired) {
+                    resultDiv.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+                    resultDiv.style.border = '1px solid var(--status-red)';
+                    resultDiv.innerHTML = `<h4 style="color: var(--status-red); margin-bottom: 5px;">⚠️ Critical Alert Triggered!</h4>
+                                           <p>Scan successful: ${data.patient_name} located at ${data.location}.</p>`;
+                } else {
+                    resultDiv.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
+                    resultDiv.style.border = '1px solid var(--status-green)';
+                    resultDiv.innerHTML = `<h4 style="color: var(--status-green); margin-bottom: 5px;">Scan Successful</h4>
+                                           <p>${data.patient_name} located at ${data.location}.</p>`;
+                }
+            } else {
+                resultDiv.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+                resultDiv.style.border = '1px solid var(--status-red)';
+                resultDiv.innerHTML = `<h4 style="color: var(--status-red); margin-bottom: 5px;">Error</h4><p>${data.error}</p>`;
+            }
+        } catch (error) {
+            console.error('Scan error:', error);
+        }
+    }
+
+    document.getElementById('btn-scan').addEventListener('click', () => {
+        const tagId = document.getElementById('sim-patient').value;
+        const readerId = document.getElementById('sim-reader').value;
+        performScan(tagId, readerId);
+    });
+
+    document.querySelectorAll('.btn-demo').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const tagId = e.target.getAttribute('data-patient');
+            const readerId = e.target.getAttribute('data-reader');
+            performScan(tagId, readerId);
+            
+            // update dropdowns to match
+            document.getElementById('sim-patient').value = tagId;
+            document.getElementById('sim-reader').value = readerId;
+        });
+    });
+</script>
+{% endblock %}

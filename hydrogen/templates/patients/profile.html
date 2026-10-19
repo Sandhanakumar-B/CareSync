@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% block title %}{{ patient.name }} - Profile{% endblock %}
+{% block page_title %}Patient Profile: {{ patient.name }}{% endblock %}
+
+{% block content %}
+<div class="grid-3">
+    <div class="card">
+        <h3 style="color: var(--accent-cyan); margin-bottom: 20px;">Patient Details</h3>
+        <p><strong>Code:</strong> {{ patient.patient_code }}</p>
+        <p><strong>Age/Gender:</strong> {{ patient.age }} / {{ patient.gender }}</p>
+        <p><strong>Condition:</strong> {{ patient.medical_condition }}</p>
+        <p><strong>Room:</strong> {{ patient.room_number }}</p>
+        <p><strong>RFID Tag:</strong> {{ patient.rfid_tag_id }}</p>
+        <p><strong>Caregiver:</strong> {{ patient.caregiver_name }}</p>
+        <p><strong>Emergency:</strong> {{ patient.emergency_contact }}</p>
+        <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 15px 0;">
+        <p><strong>Status:</strong> 
+            {% if patient.status == 'Normal' %}
+                <span class="badge green">Normal</span>
+            {% elif patient.status == 'Attention Required' %}
+                <span class="badge amber">Attention Required</span>
+            {% else %}
+                <span class="badge red">Alert</span>
+            {% endif %}
+        </p>
+        <p><strong>Current Location:</strong> {{ patient.current_location }}</p>
+        <p><strong>Last Seen:</strong> {{ patient.last_seen }}</p>
+    </div>
+
+    <div class="card" style="grid-column: span 2;">
+        <h3 style="color: var(--status-red); margin-bottom: 20px;">Active/Recent Alerts</h3>
+        {% if alerts %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Type</th>
+                    <th>Location</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in alerts %}
+                <tr>
+                    <td>{{ a.timestamp }}</td>
+                    <td>{{ a.alert_type }} ({{ a.severity }})</td>
+                    <td>{{ a.location }}</td>
+                    <td>
+                        {% if a.status == 'Active' %}
+                            <span class="badge red">Active</span>
+                        {% else %}
+                            <span class="badge green">Resolved</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No recent alerts.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <h3 style="color: var(--accent-blue); margin-bottom: 20px;">Movement History (Last 50)</h3>
+    {% if movement_logs %}
+    <table>
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Location</th>
+                <th>Reader ID</th>
+                <th>Source</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in movement_logs %}
+            <tr>
+                <td>{{ log.timestamp }}</td>
+                <td>{{ log.location_name }}</td>
+                <td>{{ log.reader_id }}</td>
+                <td>{{ log.trigger_source }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No movement history available.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}Patients{% endblock %}
+{% block page_title %}Patient Management{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <input type="text" id="search" class="form-control" placeholder="Search patients..." style="width: 300px;">
+        {% if session.get('role') == 'admin' %}
+            <a href="{{ url_for('patient.new_patient') }}" class="btn btn-primary">Add New Record</a>
+        {% endif %}
+    </div>
+
+    <table id="patients-table">
+        <thead>
+            <tr>
+                <th>Code</th>
+                <th>Name</th>
+                <th>Location</th>
+                <th>Status</th>
+                <th>Caregiver</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in patients %}
+            <tr>
+                <td>{{ p.patient_code }}</td>
+                <td>{{ p.name }}</td>
+                <td>{{ p.current_location or 'Unknown' }}</td>
+                <td>
+                    {% if p.status == 'Normal' %}
+                        <span class="badge green">Normal</span>
+                    {% elif p.status == 'Attention Required' %}
+                        <span class="badge amber">Attention Required</span>
+                    {% else %}
+                        <span class="badge red">Alert</span>
+                    {% endif %}
+                </td>
+                <td>{{ p.caregiver_name }}</td>
+                <td>
+                    <a href="{{ url_for('patient.view_profile', id=p.id) }}" class="btn btn-primary" style="padding: 5px 10px; font-size: 0.8rem;">Profile</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

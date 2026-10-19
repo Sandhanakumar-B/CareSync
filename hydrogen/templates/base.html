@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CareSync - {% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    {% if session.get('user_id') %}
+    <nav class="sidebar">
+        <div class="logo">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            CareSync
+        </div>
+        <ul class="nav-links">
+            <li><a href="{{ url_for('dashboard.index') }}" {% if request.endpoint == 'dashboard.index' %}class="active"{% endif %}>Dashboard</a></li>
+            <li>
+                <a href="{{ url_for('map.facility_map') }}" {% if request.endpoint == 'map.facility_map' %}class="active"{% endif %}>
+                    Facility Map <span class="live-badge">Live</span>
+                </a>
+            </li>
+            <li><a href="{{ url_for('patient.list_patients') }}" {% if request.endpoint and request.endpoint.startswith('patient') %}class="active"{% endif %}>Patients</a></li>
+            <li><a href="{{ url_for('alert.list_alerts') }}" {% if request.endpoint and request.endpoint.startswith('alert') %}class="active"{% endif %}>Alerts</a></li>
+            <li><a href="{{ url_for('log.list_logs') }}" {% if request.endpoint and request.endpoint.startswith('log') %}class="active"{% endif %}>Movement Logs</a></li>
+            <li><a href="{{ url_for('rfid.simulator') }}" {% if request.endpoint == 'rfid.simulator' %}class="active"{% endif %}>RFID Simulator</a></li>
+            <li><a href="{{ url_for('rfid.list_readers') }}" {% if request.endpoint == 'rfid.list_readers' %}class="active"{% endif %}>Readers</a></li>
+            <li><a href="{{ url_for('rfid.list_tags') }}" {% if request.endpoint == 'rfid.list_tags' %}class="active"{% endif %}>Tags</a></li>
+        </ul>
+    </nav>
+    <main class="main-content">
+        <header class="header">
+            <h2>{% block page_title %}{% endblock %}</h2>
+            <div class="user-info">
+                <span>{{ session.get('full_name') }} ({{ session.get('role') }})</span>
+                <a href="{{ url_for('auth.logout') }}" class="btn-logout">Logout</a>
+            </div>
+        </header>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="card" style="border-color: {% if category == 'error' %}var(--status-red){% else %}var(--status-green){% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+    {% else %}
+        {% block no_auth_content %}{% endblock %}
+    {% endif %}
+    
+    <script>
+        // Global utility to fetch live data
+        async function fetchLiveFeed() {
+            try {
+                const response = await fetch('/api/dashboard/live-feed');
+                return await response.json();
+            } catch (error) {
+                console.error("Error fetching live feed:", error);
+                return null;
+            }
+        }
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

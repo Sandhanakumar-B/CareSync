@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block title %}Login{% endblock %}
+
+{% block no_auth_content %}
+<div style="display: flex; justify-content: center; align-items: center; min-height: 100vh; width: 100%;">
+    <div class="card" style="width: 100%; max-width: 400px; padding: 40px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <div class="logo" style="font-size: 2rem; color: var(--accent-cyan); display: flex; justify-content: center; align-items: center; gap: 10px;">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                CareSync
+            </div>
+            <p style="color: var(--text-secondary); margin-top: 10px;">Smart Patient Monitoring</p>
+        </div>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div style="color: var(--status-red); margin-bottom: 20px; text-align: center;">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('auth.login') }}">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" name="username" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" name="password" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">Login</button>
+        </form>
+        
+        <div style="margin-top: 20px; font-size: 0.85rem; color: var(--text-secondary); text-align: center;">
+            Demo Accounts:<br>
+            admin / admin123<br>
+            caregiver / caregiver123
+        </div>
+    </div>
+</div>
+{% endblock %}
